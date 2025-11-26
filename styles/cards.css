@@ -1,0 +1,68 @@
+/* 卡牌基礎樣式 */
+.card {
+    position: absolute;
+    transform-origin: center bottom;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s, border-color 0.2s;
+    will-change: transform;
+
+    /* 使用 CSS 變數來定義基礎位置 */
+    --tx: 0px;
+    --ty: 0px;
+    --rot: 0deg;
+
+    transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot));
+}
+
+/* 遊戲中的卡牌懸停 */
+.game-card:not(.is-dragging):hover {
+    z-index: 100 !important;
+    transform: translate3d(var(--tx), calc(var(--ty) - 40px), 1px) rotate(var(--rot)) scale(1.15) !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* 選牌/獎勵階段的卡牌樣式 (靜態) */
+.draft-card {
+    position: relative;
+    transform: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.draft-card:hover {
+    transform: translateY(-10px);
+}
+
+.draft-card.selected {
+    border-color: #fbbf24 !important; /* amber-400 */
+    box-shadow: 0 0 0 4px #fbbf24, 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    transform: translateY(-15px) scale(1.05);
+}
+
+/* 拖曳中的卡牌樣式 */
+.is-dragging {
+    transition: none !important;
+    z-index: 1000 !important;
+    cursor: grabbing;
+}
+
+/* 目標區域高亮 */
+.target-active {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: #fbbf24 !important; /* amber-400 */
+    box-shadow: 0 0 20px #fbbf24;
+    transform: scale(1.05);
+}
+
+.target-filled {
+    border-color: #4ade80 !important; /* green-400 */
+    background-color: rgba(74, 222, 128, 0.1);
+    color: #4ade80 !important;
+    border-style: solid !important;
+}
+
+/* 棄牌堆區域高亮 */
+.discard-active {
+    border-color: #ef4444 !important; /* red-500 */
+    box-shadow: 0 0 20px #ef4444;
+    transform: scale(1.1);
+}

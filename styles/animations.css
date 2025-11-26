@@ -1,0 +1,44 @@
+/* 浮動文字動畫 */
+@keyframes floatUp {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(0.5);
+    }
+    20% {
+        transform: translate(-50%, -20px) scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -80px) scale(1);
+    }
+}
+
+.float-msg {
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    animation: floatUp 1.2s forwards;
+    z-index: 2000;
+    font-weight: 900;
+    font-size: 2rem;
+    white-space: nowrap;
+    text-shadow: 0px 0px 10px rgba(0, 0, 0, 0.8);
+}
+
+/* 卡牌消失動畫 */
+@keyframes vanish {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0) rotate(20deg);
+        opacity: 0;
+    }
+}
+
+.card-vanish {
+    animation: vanish 0.3s forwards;
+}

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>支語糾察隊卡牌戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/cards.css">
+    <link rel="stylesheet" href="styles/animations.css">
+    <link rel="stylesheet" href="styles/screens.css">
+    <link rel="stylesheet" href="styles/dev-mode.css">
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col items-center relative select-none text-white">
+
+    <!-- SVG Layer for Arrow -->
+    <svg id="drag-layer" class="absolute inset-0 w-full h-full pointer-events-none z-[100]" style="overflow: visible;">
+        <defs>
+            <filter id="glow">
+                <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+        <path id="drag-arrow" d="" fill="none" stroke="#fbbf24" stroke-width="6" stroke-linecap="round" style="opacity: 0; filter: url(#glow);"></path>
+        <polygon id="arrow-head" points="0,0 -20,-10 -20,10" fill="#fbbf24" style="opacity: 0; filter: url(#glow);"></polygon>
+    </svg>
+
+    <!-- === Screen 1: Start Menu === -->
+    <div id="start-screen" class="screen active bg-slate-900">
+        <!-- Dev Mode Trigger -->
+        <div class="absolute top-4 right-4 flex gap-2 z-[60]">
+            <input type="password" id="dev-code" class="dev-input w-24 text-xs opacity-30 hover:opacity-100 focus:opacity-100 transition-opacity" placeholder="開發人員代碼">
+            <button id="dev-check-btn" class="bg-slate-700 hover:bg-slate-600 text-white px-2 rounded text-xs opacity-30 hover:opacity-100 focus:opacity-100 transition-opacity">→</button>
+        </div>
+
+        <h1 class="text-5xl md:text-7xl font-black mb-12 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400 drop-shadow-lg text-center leading-tight">
+            支語糾察隊<br>卡牌戰
+        </h1>
+        <div class="flex flex-col gap-6 w-64">
+            <button id="start-game-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg border-b-4 border-indigo-800 btn-press text-xl">
+                開始遊戲
+            </button>
+            <button id="show-rules-btn" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl shadow-lg border-b-4 border-slate-900 btn-press text-xl">
+                遊戲規則
+            </button>
+        </div>
+    </div>
+
+    <!-- === Screen 1.5: Developer Mode === -->
+    <div id="dev-screen" class="screen bg-slate-900 overflow-y-auto py-10 justify-start">
+        <div class="w-full max-w-4xl p-6 bg-slate-800 rounded-xl shadow-2xl border border-slate-600 mb-10 mt-10">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-purple-400">開發者模式</h2>
+                <button id="dev-exit-btn" class="bg-slate-600 px-4 py-2 rounded hover:bg-slate-500">離開</button>
+            </div>
+
+            <!-- 1. Add Card Form -->
+            <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600 mb-8 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 bg-blue-500 h-full"></div>
+                <h3 class="text-lg font-bold mb-4 text-blue-400 pl-2">步驟一：新增卡牌</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">名稱</label>
+                        <input type="text" id="dev-c-name" class="dev-input w-full" placeholder="例如：西紅柿">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">圖示 (Emoji)</label>
+                        <input type="text" id="dev-c-icon" class="dev-input w-full" placeholder="🍅">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">類別代號 (英文)</label>
+                        <input type="text" id="dev-c-cat" class="dev-input w-full" placeholder="tomato">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">陣營</label>
+                        <select id="dev-c-type" class="dev-input w-full h-8">
+                            <option value="cn">支語 (紅色)</option>
+                            <option value="tw">台灣用語 (藍色)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="dev-add-card-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded shadow-lg flex-grow">新增卡牌</button>
+                    <button id="dev-clear-cards-btn" class="bg-red-900/50 hover:bg-red-800 text-red-200 text-xs py-2 px-4 rounded border border-red-800">清除自訂卡</button>
+                </div>
+            </div>
+
+            <!-- Card List Display -->
+            <div class="mb-8">
+                <h3 class="text-xl font-bold mb-2 border-b border-slate-600 pb-2">現有卡牌列表</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono text-slate-300" id="dev-card-list">
+                    <!-- JS populated -->
+                </div>
+            </div>
+
+            <!-- 2. Add Level Form -->
+            <div class="bg-slate-700/50 p-4 rounded-lg border border-slate-600 mb-8 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 bg-green-500 h-full"></div>
+                <h3 class="text-lg font-bold mb-4 text-green-400 pl-2">步驟二：新增關卡</h3>
+                <div class="grid gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-300 mb-1 font-bold">1. 題目段落 (分隔符：<span class="text-yellow-400">|</span> 或 <span class="text-yellow-400">｜</span>)</label>
+                            <input type="text" id="dev-parts" class="dev-input w-full" placeholder="他今天｜會坐｜來。">
+                            <p class="text-xs text-slate-400 mt-1">範例：段落數比填空數多1。支援全形符號。</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-300 mb-1 font-bold">2. 填空對應的【類別代號】(分隔符：<span class="text-yellow-400">|</span> 或 <span class="text-yellow-400">｜</span>)</label>
+                            <input type="text" id="dev-cats" class="dev-input w-full" placeholder="likelihood｜bus">
+                            <p class="text-xs text-slate-400 mt-1">提示：輸入卡牌列表中的灰色代號。支援全形符號。</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="dev-add-level-btn" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded shadow-lg flex-grow">新增題目</button>
+                        <button id="dev-clear-levels-btn" class="bg-red-900/50 hover:bg-red-800 text-red-200 text-xs py-2 px-4 rounded border border-red-800">清除自訂題</button>
+                    </div>
+                </div>
+
+                <!-- Category ID Lookup -->
+                <div class="mt-6 pt-4 border-t border-slate-600">
+                    <h4 class="text-base font-semibold mb-2 text-yellow-300">核心類別 ID 參考表 (需使用 ID)</h4>
+                    <div id="dev-category-lookup" class="bg-slate-800 p-3 rounded text-xs text-slate-300 max-h-32 overflow-y-auto">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Level List -->
+            <div class="mb-8">
+                <h3 class="text-xl font-bold mb-2 border-b border-slate-600 pb-2">現有關卡列表</h3>
+                <div class="space-y-2 text-sm text-slate-300 max-h-60 overflow-y-auto" id="dev-level-list">
+                    <!-- JS populated -->
+                </div>
+            </div>
+
+            <!-- New Back Button -->
+            <div class="flex justify-center">
+                <button id="dev-back-btn" class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg border-b-4 border-slate-800 btn-press">
+                    返回主選單
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- === Screen 2: Rules === -->
+    <div id="rules-screen" class="screen bg-slate-900">
+        <div class="max-w-2xl w-full p-8 bg-slate-800 rounded-2xl border border-slate-600 shadow-2xl">
+            <h2 class="text-3xl font-bold mb-6 text-center text-yellow-400">環境生存指南</h2>
+            <div class="space-y-4 text-slate-300 text-lg leading-relaxed h-64 overflow-y-auto pr-4 mb-6">
+                <p>我們生活在一個資訊爆炸的時代，語言的邊界正在模糊。面對龐大的用語洪流，你有兩個選擇：</p>
+                <p class="mt-4">1. <strong class="text-green-400">堅守本土</strong>：盡可能使用台灣慣用詞彙來回應，累積<span class="text-green-400">台灣價值</span>。</p>
+                <p>2. <strong class="text-red-400">擁抱融合</strong>：順應潮流使用中國用語，累積<span class="text-red-400">社會信用</span>。</p>
+                <hr class="border-slate-600 my-4">
+                <p><strong>基本操作：</strong></p>
+                <p>• 將卡牌拖曳至上方虛線框進行施放。</p>
+                <p>• 若詞不達意（卡牌與題目完全無關），會被記「醜」，醜三則出局。</p>
+                <p>• <span class="text-yellow-400 font-bold">重要：</span>整局遊戲只有 3 次免費抽牌機會。但你可以將不需要的手牌拖至右下角<span class="text-red-400">棄牌堆</span>，以「一換一」的方式換取額外抽牌次數。</p>
+                <p>• 每回合結束後，你必須從環境中接收新卡牌。</p>
+            </div>
+            <div class="flex justify-center">
+                <button id="rules-back-btn" class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg btn-press">
+                    返回主選單
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- === Screen 3: Initial Draft Selection === -->
+    <div id="draft-screen" class="screen bg-slate-900">
+        <div class="flex flex-col items-center w-full max-w-6xl px-4">
+            <h2 class="text-3xl md:text-4xl font-bold mb-2">建立你的語言資料庫</h2>
+            <p class="text-slate-400 mb-8">環境中充滿了各式資訊，請從中選擇 <span class="text-yellow-400 font-bold">4</span> 張作為起始牌庫</p>
+
+            <div id="draft-container" class="flex flex-wrap justify-center gap-4 md:gap-8 mb-10 w-full">
+                <!-- JS will populate cards here -->
+            </div>
+
+            <button id="confirm-draft-btn" class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-10 rounded-xl shadow-lg border-b-4 border-green-800 btn-press text-xl btn-disabled" disabled>
+                確認選擇 (0/4)
+            </button>
+        </div>
+    </div>
+
+    <!-- === Screen 3.5: Level Reward Draft === -->
+    <div id="reward-screen" class="screen bg-slate-900/95 backdrop-blur-sm z-[150]">
+        <div class="flex flex-col items-center w-full max-w-6xl px-4">
+            <div class="text-yellow-400 font-bold text-xl mb-2">關卡完成！</div>
+            <h2 class="text-3xl md:text-4xl font-bold mb-8">接收環境資訊...</h2>
+
+            <div id="reward-container" class="flex flex-wrap justify-center gap-6 md:gap-10 mb-10 w-full">
+                <!-- JS will populate cards here -->
+            </div>
+
+            <div class="text-slate-400 text-sm">無論你願不願意，你必須選擇一張加入牌庫</div>
+        </div>
+    </div>
+
+    <!-- === Screen 4: Gameplay UI === -->
+    <div id="game-ui" class="screen bg-transparent pointer-events-none">
+
+        <!-- Restart Button (Top Left) -->
+        <div class="absolute top-6 left-6 z-50 pointer-events-auto">
+            <button id="restart-btn" class="bg-slate-600/80 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded-full shadow-lg border border-slate-400 transition-all btn-press text-sm backdrop-blur flex items-center gap-2">
+                <span class="text-lg">↻</span> 重置
+            </button>
+        </div>
+
+        <!-- Score Display (Top Right) -->
+        <div class="absolute top-6 right-6 flex flex-col gap-2 z-50 pointer-events-auto items-end">
+            <!-- Taiwan Value -->
+            <div class="bg-green-900/80 border border-green-500 rounded-lg px-4 py-2 flex items-center gap-3 shadow-lg backdrop-blur min-w-[160px] justify-between">
+                <span class="text-xs text-green-200">台灣價值</span>
+                <span id="score-tw" class="text-green-400 font-bold text-2xl font-mono">50</span>
+            </div>
+            <!-- Social Credit -->
+            <div class="bg-red-900/80 border border-red-500 rounded-lg px-4 py-2 flex items-center gap-3 shadow-lg backdrop-blur min-w-[160px] justify-between">
+                <span class="text-xs text-red-200">社會信用</span>
+                <span id="score-sc" class="text-red-400 font-bold text-2xl font-mono">50</span>
+            </div>
+
+            <!-- Strikes (Ugly Count) -->
+            <div class="flex gap-1 mt-2 bg-black/40 p-2 rounded-lg backdrop-blur border border-white/10">
+                <div id="strike-1" class="strike-mark">❌</div>
+                <div id="strike-2" class="strike-mark">❌</div>
+                <div id="strike-3" class="strike-mark">💀</div>
+            </div>
+        </div>
+
+        <!-- Draw Card Button & Deck Count (Bottom Left) -->
+        <div class="absolute bottom-6 left-6 z-50 flex items-end gap-3 pointer-events-auto group">
+            <button id="draw-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg border-2 border-indigo-400 transition-all btn-press flex flex-col items-center gap-1 relative">
+                <span class="text-xl">🎴 抽牌</span>
+                <span id="draw-count" class="text-xs text-indigo-200">剩餘: 3</span>
+            </button>
+
+            <!-- Deck Count Display with Tooltip -->
+            <div class="relative group cursor-help">
+                <div class="bg-slate-800/80 border border-slate-600 rounded-lg px-3 py-1 text-sm text-slate-300 shadow-md backdrop-blur mb-1">
+                    牌庫: <span id="deck-count" class="text-white font-bold font-mono">0</span>
+                </div>
+                <!-- Deck Tooltip -->
+                <div class="tooltip-content absolute bottom-full left-0 mb-3 w-48 bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-3 z-50 backdrop-blur-sm pointer-events-none">
+                    <div class="text-xs text-slate-400 mb-2 border-b border-slate-600 pb-1">牌庫剩餘 (順序隨機)</div>
+                    <ul id="deck-list" class="text-sm space-y-1">
+                        <li class="text-slate-500 italic">空空如也...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discard Pile (Bottom Right) -->
+        <div class="absolute bottom-6 right-6 z-50 group pointer-events-auto">
+            <div id="discard-zone" class="w-16 h-20 bg-slate-700 rounded-lg border-2 border-slate-500 flex items-center justify-center shadow-inner relative cursor-help transition-all duration-200">
+                <span class="text-3xl opacity-50">🗑️</span>
+                <div class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white" id="discard-count">0</div>
+            </div>
+            <!-- Discard Tooltip -->
+            <div class="tooltip-content absolute bottom-full right-0 mb-3 w-48 bg-slate-800 border border-slate-600 rounded-lg shadow-xl p-3 z-50 backdrop-blur-sm pointer-events-none">
+                <div class="text-xs text-slate-400 mb-2 border-b border-slate-600 pb-1">棄牌堆內容</div>
+                <ul id="discard-list" class="text-sm space-y-1">
+                    <li class="text-slate-500 italic">空空如也...</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Game Area (Center Target) -->
+        <div class="flex-grow flex items-center justify-center w-full relative z-0 pointer-events-auto">
+            <div id="question-container" class="text-xl md:text-3xl font-bold flex flex-wrap justify-center items-center gap-2 bg-slate-800/40 p-6 md:p-8 rounded-2xl backdrop-blur-sm border border-white/10 shadow-2xl -translate-y-20 transition-all duration-500 max-w-[90vw]">
+                <!-- JS will populate question here -->
+            </div>
+            <div id="feedback-container"></div>
+        </div>
+
+        <!-- Hand Area (Bottom) -->
+        <div id="hand-area" class="h-64 w-full absolute bottom-0 left-0 flex justify-center items-end z-40 pointer-events-none">
+            <div id="hand-container" class="relative w-full h-full max-w-5xl mx-auto pointer-events-auto">
+                <!-- Hand cards -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay (Level Complete / Game Over) -->
+    <div id="overlay" class="absolute inset-0 bg-black/90 z-[2000] hidden flex items-center justify-center flex-col p-4 text-center">
+        <div class="text-4xl md:text-6xl font-bold text-white mb-4" id="overlay-title">關卡完成</div>
+        <div class="text-xl text-slate-300 mb-8" id="overlay-subtitle">準備進入下一關...</div>
+
+        <div id="final-stats" class="hidden flex gap-8 mb-8">
+            <div class="text-center">
+                <div class="text-sm text-green-400">台灣價值</div>
+                <div class="text-4xl font-mono text-white" id="final-tw">0</div>
+            </div>
+            <div class="text-center">
+                <div class="text-sm text-red-400">社會信用</div>
+                <div class="text-4xl font-mono text-white" id="final-sc">0</div>
+            </div>
+        </div>
+
+        <button id="overlay-restart-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg border-2 border-indigo-400 transition-all btn-press hidden text-xl">
+            回到主選單
+        </button>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
