@@ -63,14 +63,20 @@ export class DataManager {
      * 獲取支語卡牌
      */
     getCNCards() {
-        return Object.keys(this.cards).filter(id => !this.cards[id].isTW);
+        return Object.keys(this.cards).filter(id => {
+            const card = this.cards[id];
+            return !card.isTW && card.category !== 'wildcard';
+        });
     }
 
     /**
      * 獲取台灣卡牌
      */
     getTWCards() {
-        return Object.keys(this.cards).filter(id => this.cards[id].isTW);
+        return Object.keys(this.cards).filter(id => {
+            const card = this.cards[id];
+            return card.isTW && card.category !== 'wildcard';
+        });
     }
 
     /**
