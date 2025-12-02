@@ -72,28 +72,70 @@ export class DragSystem {
         const relY = targetY - originY;
         const isAiming = pos.y < this.state.aimThreshold;
 
-        if (isAiming) {
+        // 優先檢查是否對準目標槽位 (修復拖曳無法施放的 BUG)
+        // 即使滑鼠位置低於 aimThreshold，只要對準了槽位也算瞄準
+        const hitZone = this.checkTargetCollision(pos.x, pos.y);
+
+        if (isAiming || hitZone) {
             // 瞄準目標區域
             const aimY = this.state.aimThreshold - originY;
+
+            // 如果確實對準了槽位，就不要強制飛到 aimThreshold 高度，而是跟隨滑鼠 (或者保持吸附)
+            // 這裡保留原有的 aim 視覺效果，但邏輯上已修正
             card.style.transform = `translate(${relX}px, ${aimY}px) scale(0.8) rotate(0deg)`;
             this.drawArrow(targetX, this.state.aimThreshold, pos.x, pos.y);
-            this.checkTargetCollision(pos.x, pos.y);
+
+            // 萬用牌特殊處理：懸停時觸發選擇預覽
+            if (hitZone && card.dataset.id === 'wildcard' && this.callbacks.onWildcardHover) {
+                const zone = this.getActiveTargetZone();
+                if (zone) {
+                    const slotIndex = parseInt(zone.dataset.slotIndex);
+                    const zoneRect = zone.getBoundingClientRect();
+                    const centerX = zoneRect.left + zoneRect.width / 2;
+                    // 判定偏左還是偏右
+                    const choice = pos.x < centerX ? 'cn' : 'tw';
+                    this.callbacks.onWildcardHover(slotIndex, choice, pos.x, pos.y);
+                }
+            } else if (this.callbacks.onWildcardHoverEnd) {
+                this.callbacks.onWildcardHoverEnd();
+            }
+
+            // 清除棄牌/燒牌狀態
+            this.els.discardZone.classList.remove('discard-active');
+            this.els.burnZone.classList.remove('burn-active');
+
         } else {
-            // 檢查是否拖曳到棄牌堆
+            this.hideArrow();
+            // 這裡不需要 resetAllTargetZones，因為 checkTargetCollision 已經處理了 (如果沒撞到會 reset)
+            // 但為了保險起見，如果 checkTargetCollision 回傳 false，我們確保重置
+            if (!hitZone) {
+                this.resetAllTargetZones();
+            }
+            if (this.callbacks.onWildcardHoverEnd) this.callbacks.onWildcardHoverEnd();
+
+            // 檢查是否拖曳到棄牌堆 (垃圾桶)
             const discardRect = this.els.discardZone.getBoundingClientRect();
             const isOverDiscard = pos.x >= discardRect.left && pos.x <= discardRect.right &&
-                                  pos.y >= discardRect.top && pos.y <= discardRect.bottom;
+                pos.y >= discardRect.top && pos.y <= discardRect.bottom;
+
+            // 檢查是否拖曳到燒牌堆 (火坑)
+            const burnRect = this.els.burnZone.getBoundingClientRect();
+            const isOverBurn = pos.x >= burnRect.left && pos.x <= burnRect.right &&
+                pos.y >= burnRect.top && pos.y <= burnRect.bottom;
 
             if (isOverDiscard) {
                 this.els.discardZone.classList.add('discard-active');
-                card.style.transform = `translate(${relX}px, ${relY}px) scale(0.6) rotate(360deg)`;
+                this.els.burnZone.classList.remove('burn-active');
+                card.style.transform = `translate(${relX}px, ${relY}px) scale(0.6) rotate(-15deg)`;
+            } else if (isOverBurn) {
+                this.els.burnZone.classList.add('burn-active');
+                this.els.discardZone.classList.remove('discard-active');
+                card.style.transform = `translate(${relX}px, ${relY}px) scale(0.6) rotate(15deg)`;
             } else {
                 this.els.discardZone.classList.remove('discard-active');
+                this.els.burnZone.classList.remove('burn-active');
                 card.style.transform = `translate(${relX}px, ${relY}px) rotate(0deg)`;
             }
-
-            this.hideArrow();
-            this.resetAllTargetZones();
         }
     }
 
@@ -108,20 +150,37 @@ export class DragSystem {
         // 檢查放置區域
         const targetZone = this.getActiveTargetZone();
         const isDiscarded = this.els.discardZone.classList.contains('discard-active');
+        const isBurned = this.els.burnZone.classList.contains('burn-active');
 
         this.hideArrow();
         this.resetAllTargetZones();
+        if (this.callbacks.onWildcardHoverEnd) this.callbacks.onWildcardHoverEnd();
+
         this.els.discardZone.classList.remove('discard-active');
+        this.els.burnZone.classList.remove('burn-active');
         card.classList.remove('is-dragging');
         this.state.draggingCard = null;
 
         if (targetZone && this.callbacks.onCardPlayed) {
             // 打出卡牌到目標區域
             const slotIndex = parseInt(targetZone.dataset.slotIndex);
-            this.callbacks.onCardPlayed(card, slotIndex);
+
+            // 萬用牌特殊處理：傳遞選擇
+            let extraData = null;
+            if (card.dataset.id === 'wildcard') {
+                const pos = this.getPointerPos(e);
+                const zoneRect = targetZone.getBoundingClientRect();
+                const centerX = zoneRect.left + zoneRect.width / 2;
+                extraData = { choice: pos.x < centerX ? 'cn' : 'tw' };
+            }
+
+            this.callbacks.onCardPlayed(card, slotIndex, extraData);
         } else if (isDiscarded && this.callbacks.onCardDiscarded) {
-            // 棄牌
+            // 棄牌 (垃圾桶)
             this.callbacks.onCardDiscarded(card);
+        } else if (isBurned && this.callbacks.onCardBurned) {
+            // 燒牌 (火坑)
+            this.callbacks.onCardBurned(card);
         } else {
             // 放回手牌
             card.style.transform = '';
