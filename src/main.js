@@ -565,6 +565,7 @@ class Game {
         // 抽初始手牌
         this.state.drawCardsUntil(GAME_CONFIG.INITIAL_HAND_SIZE);
         this.renderHand();
+        this.updateDeckUI();
     }
 
     /**
@@ -726,6 +727,7 @@ class Game {
             } else {
                 this.state.drawCardsUntil(GAME_CONFIG.INITIAL_HAND_SIZE);
                 this.renderHand();
+                this.updateDeckUI();
             }
         });
     }
