@@ -34,6 +34,9 @@ export const GAME_CONFIG = {
     SCORE_WILDCARD_SC: 10,
     SCORE_WILDCARD_PENALTY_FACTOR: 0.5,
 
+    // 輔助卡牌系統
+    INITIAL_HELPER_CARDS: ['spin_again', 'pointer_left', 'pointer_right'],
+
     // 其他
     FAN_BASE_Y: 50,
     FAN_RADIUS: 800,
