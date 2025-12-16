@@ -544,15 +544,15 @@ class Game {
             this.state.levelIndex = 0;
             this.state.deck = MathHelpers.shuffle(this.state.deck);
             this.state.hand = [];
-            this.state.discardPile = [];
-            this.state.drawsLeft = GAME_CONFIG.INITIAL_DRAW_COUNT;
-            this.state.burnCount = 0; // 重置燒牌
+            // this.state.discardPile = []; // Removed in new system
+            // this.state.drawsLeft = GAME_CONFIG.INITIAL_DRAW_COUNT; // Removed
+            // this.state.burnCount = 0; // Removed
 
             this.updateScores();
             this.updateStrikes();
-            this.updateDeckUI();
-            this.updateDiscardUI();
-            this.updateBurnUI(); // New
+            // this.updateDeckUI(); // Removed - no deck UI anymore
+            // this.updateDiscardUI(); // Removed - no discard UI anymore
+            // this.updateBurnUI(); // Removed - no burn UI anymore
 
             this.switchScreen('game');
             this.startLevel();
@@ -581,19 +581,19 @@ class Game {
         const allCards = Object.values(this.dataManager.getAllCards()).filter(card => card.id !== 'wildcard');
         this.wheelSystem.initWheel(allCards);
 
-        this.updateDrawBtn();
+        // this.updateDrawBtn(); // Removed - no draw button anymore
 
         // 手牌回到棄牌堆
         this.state.returnHandToDiscard();
 
         // 棄牌堆洗回牌庫
         this.state.reshuffleDeck(MathHelpers.shuffle);
-        this.updateDiscardUI();
+        // this.updateDiscardUI(); // Removed - no discard UI anymore
 
         // 抽初始手牌
         this.state.drawCardsUntil(GAME_CONFIG.INITIAL_HAND_SIZE);
         this.renderHand();
-        this.updateDeckUI();
+        // this.updateDeckUI(); // Removed - no deck UI anymore
     }
 
     /**
