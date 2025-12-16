@@ -41,21 +41,21 @@ class Game {
             // Game UI
             handContainer: DOMHelpers.$('hand-container'),
             questionContainer: DOMHelpers.$('question-container'),
-            discardZone: DOMHelpers.$('discard-zone'),
-            discardCountBadge: DOMHelpers.$('discard-count-badge'), // New
-            burnZone: DOMHelpers.$('burn-zone'), // New
-            burnCount: DOMHelpers.$('burn-count'), // New
-            burnProgressBar: DOMHelpers.$('burn-progress-bar'), // New
-            wildcardOverlay: DOMHelpers.$('wildcard-overlay'), // New
+            // discardZone: DOMHelpers.$('discard-zone'), // Removed in Commit 3
+            // discardCountBadge: DOMHelpers.$('discard-count-badge'), // Removed
+            // burnZone: DOMHelpers.$('burn-zone'), // Removed
+            // burnCount: DOMHelpers.$('burn-count'), // Removed
+            // burnProgressBar: DOMHelpers.$('burn-progress-bar'), // Removed
+            wildcardOverlay: DOMHelpers.$('wildcard-overlay'),
             dragArrow: DOMHelpers.$('drag-arrow'),
             arrowHead: DOMHelpers.$('arrow-head'),
             feedbackContainer: DOMHelpers.$('feedback-container'),
-            drawBtn: DOMHelpers.$('draw-btn'),
-            drawCount: DOMHelpers.$('draw-count'),
-            deckCount: DOMHelpers.$('deck-count'),
-            deckList: DOMHelpers.$('deck-list'),
-            discardCount: DOMHelpers.$('discard-count'), // Keep for compatibility or remove if unused
-            discardList: DOMHelpers.$('discard-list'),
+            // drawBtn: DOMHelpers.$('draw-btn'), // Removed
+            // drawCount: DOMHelpers.$('draw-count'), // Removed
+            // deckCount: DOMHelpers.$('deck-count'), // Removed
+            // deckList: DOMHelpers.$('deck-list'), // Removed
+            // discardCount: DOMHelpers.$('discard-count'), // Removed
+            // discardList: DOMHelpers.$('discard-list'), // Removed
             scoreTW: DOMHelpers.$('score-tw'),
             scoreSC: DOMHelpers.$('score-sc'),
             strikes: [
