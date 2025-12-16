@@ -35,28 +35,51 @@ export class WheelSystem {
         this.els.wheelContainer.innerHTML = '';
         this.sectors = [];
 
+        // 確保卡片按支語/台灣交錯排列
+        const sortedCards = this.sortCardsAlternating(cards);
+
         let currentAngle = 0;
 
-        cards.forEach((cardData, index) => {
+        sortedCards.forEach((cardData, index) => {
             // 支語40度，台灣20度
             const sectorSize = cardData.isTW ? 20 : 40;
 
-            // 創建扇區
+            // 使用簡化的定位方式：每個扇區是一個絕對定位的標籤
             const sector = document.createElement('div');
-            sector.className = `wheel-sector ${cardData.isTW ? 'wheel-sector-tw' : 'wheel-sector-cn'}`;
-            sector.style.transform = `rotate(${currentAngle}deg) skewY(${90 - sectorSize}deg)`;
+            sector.className = 'wheel-sector-label';
             sector.dataset.cardId = cardData.id || `${cardData.category}_${cardData.isTW ? 'tw' : 'cn'}`;
 
-            // 扇區內容（需要反向變形以保持正向）
-            const content = document.createElement('div');
-            content.className = 'wheel-sector-content';
-            content.style.transform = `skewY(${-(90 - sectorSize)}deg) rotate(${sectorSize / 2}deg)`;
-            content.innerHTML = `
-                <div class="wheel-card-icon">${cardData.icon}</div>
-                <div class="wheel-card-name">${cardData.name}</div>
+            // 計算標籤位置（圓周上的點）
+            const labelAngle = currentAngle + sectorSize / 2;
+            const labelRadius = 7; // rem
+            const radian = (labelAngle - 90) * Math.PI / 180; // -90度是因為0度在右側，我們要從頂部開始
+            const x = Math.cos(radian) * labelRadius;
+            const y = Math.sin(radian) * labelRadius;
+
+            sector.style.position = 'absolute';
+            sector.style.left = `calc(50% + ${x}rem)`;
+            sector.style.top = `calc(50% + ${y}rem)`;
+            sector.style.transform = 'translate(-50%, -50%)';
+            sector.style.zIndex = '10';
+
+            // 背景顏色
+            const bgColor = cardData.isTW
+                ? 'rgba(59, 130, 246, 0.8)' // 藍色（台灣）
+                : 'rgba(239, 68, 68, 0.8)'; // 紅色（支語）
+
+            sector.style.background = bgColor;
+            sector.style.padding = '0.5rem 0.75rem';
+            sector.style.borderRadius = '0.5rem';
+            sector.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+            sector.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)';
+
+            sector.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                    <div style="font-size: 1.5rem;">${cardData.icon}</div>
+                    <div style="font-size: 0.65rem; font-weight: bold; color: white; text-align: center; white-space: nowrap;">${cardData.name}</div>
+                </div>
             `;
 
-            sector.appendChild(content);
             this.els.wheelContainer.appendChild(sector);
 
             // 儲存扇區信息
@@ -72,6 +95,22 @@ export class WheelSystem {
 
         // 初始化指針指向第一個扇區
         this.currentPointerCard = this.sectors[0]?.cardId || null;
+    }
+
+    /**
+     * 將卡片按支語/台灣交錯排列
+     */
+    sortCardsAlternating(cards) {
+        const cnCards = cards.filter(c => !c.isTW);
+        const twCards = cards.filter(c => c.isTW);
+        const result = [];
+
+        for (let i = 0; i < Math.max(cnCards.length, twCards.length); i++) {
+            if (cnCards[i]) result.push(cnCards[i]);
+            if (twCards[i]) result.push(twCards[i]);
+        }
+
+        return result;
     }
 
     /**
