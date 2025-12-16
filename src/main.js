@@ -6,10 +6,12 @@
 import { GameState } from './core/GameState.js';
 import { DataManager } from './core/DataManager.js';
 import { DragSystem } from './systems/DragSystem.js';
+import { WheelSystem } from './systems/WheelSystem.js';
 import { DOMHelpers } from './utils/domHelpers.js';
 import { MathHelpers } from './utils/mathHelpers.js';
 import { AnimationUtils } from './ui/AnimationUtils.js';
 import { GAME_CONFIG } from './config/constants.js';
+import { HELPER_CARDS } from './config/helperCards.js';
 
 class Game {
     constructor() {
@@ -18,6 +20,7 @@ class Game {
         this.initElements();
         this.initScreens();
         this.initDragSystem();
+        this.initWheelSystem();
         this.bindEvents();
     }
 
@@ -82,7 +85,11 @@ class Game {
             devCardIcon: DOMHelpers.$('dev-c-icon'),
             devCardCat: DOMHelpers.$('dev-c-cat'),
             devCardType: DOMHelpers.$('dev-c-type'),
-            devCategoryLookup: DOMHelpers.$('dev-category-lookup')
+            devCategoryLookup: DOMHelpers.$('dev-category-lookup'),
+            // Wheel System
+            wheelContainer: DOMHelpers.$('wheel-container'),
+            wheelSpinBtn: DOMHelpers.$('wheel-spin-btn'),
+            wheelCurrentWord: DOMHelpers.$('wheel-current-word')
         };
     }
 
@@ -105,6 +112,23 @@ class Game {
             onWildcardHover: (slotIndex, choice, x, y) => this.onWildcardHover(slotIndex, choice, x, y),
             onWildcardHoverEnd: () => this.onWildcardHoverEnd()
         });
+    }
+
+    /**
+     * 初始化輪盤系統
+     */
+    initWheelSystem() {
+        this.wheelSystem = new WheelSystem(this.state, this.dataManager, this.els, {
+            onSpinComplete: (cardId) => this.onWheelSpinComplete(cardId)
+        });
+    }
+
+    /**
+     * 輪盤旋轉完成回調
+     */
+    onWheelSpinComplete(cardId) {
+        console.log('Wheel stopped at:', cardId);
+        // 顯示當前選中的詞語（Commit 4/5 會實作）
     }
 
     /**
@@ -552,6 +576,10 @@ class Game {
 
         this.renderQuestion(currentLevel);
         this.state.initLevelSlots(currentLevel.categories.length);
+
+        // 初始化輪盤（顯示全部12張詞語卡牌）
+        const allCards = Object.values(this.dataManager.getAllCards()).filter(card => card.id !== 'wildcard');
+        this.wheelSystem.initWheel(allCards);
 
         this.updateDrawBtn();
 
