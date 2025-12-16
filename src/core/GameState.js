@@ -21,14 +21,16 @@ export class GameState {
         this.mistakes = 0;
         this.levelIndex = 0;
         this.levelOrder = [];
-        this.deck = [];
-        this.hand = [];
-        this.discardPile = [];
-        this.draftOptions = [];
-        this.drawsLeft = GAME_CONFIG.INITIAL_DRAW_COUNT;
-        this.levelSlots = []; // 多填空系統
+        this.deck = [];  // 保留但用途變更（暫存卡牌ID）
+        this.hand = [];  // 混合包含詞語卡和輔助卡
+        this.draftOptions = [];  // 暫時保留，後續會移除
+        this.levelSlots = [];  // 多填空系統
         this.isTransitioning = false;
-        this.burnCount = 0; // 燒牌計數
+
+        // 輪盤系統相關狀態
+        this.wheelSpinsAvailable = 0;  // 可用轉盤次數（暫時未使用，預留）
+
+        // 移除：discardPile, drawsLeft, burnCount（舊系統不再需要）
     }
 
     /**
