@@ -28,6 +28,7 @@ export class GameState {
         this.drawsLeft = GAME_CONFIG.INITIAL_DRAW_COUNT;
         this.levelSlots = []; // 多填空系統
         this.isTransitioning = false;
+        this.burnCount = 0; // 燒牌計數
     }
 
     /**
@@ -129,12 +130,19 @@ export class GameState {
         const index = this.hand.indexOf(cardId);
         if (index === -1) return false;
         this.hand.splice(index, 1);
-        this.discardPile.push(cardId);
+
+        // 萬用卡使用後永久消失，不進入棄牌堆
+        if (cardId !== 'wildcard') {
+            this.discardPile.push(cardId);
+        } else {
+            console.log('萬用卡已使用，永久消失（不進入棄牌堆）');
+        }
+
         return true;
     }
 
     /**
-     * 棄一張牌
+     * 棄一張牌 (舊邏輯，現在主要用於燒牌前的過渡或特殊效果)
      */
     discardCard(cardId) {
         const index = this.hand.indexOf(cardId);
@@ -142,6 +150,31 @@ export class GameState {
         this.hand.splice(index, 1);
         this.discardPile.push(cardId);
         return true;
+    }
+
+    /**
+     * 燒掉一張牌 (永久移除，累積萬用牌進度)
+     * @returns {boolean} 是否觸發萬用牌獎勵
+     */
+    burnCard(cardId) {
+        const index = this.hand.indexOf(cardId);
+        if (index === -1) return false;
+
+        // 從手牌移除，且不進入棄牌堆
+        this.hand.splice(index, 1);
+
+        // 增加計數
+        this.burnCount++;
+
+        // 檢查是否達標
+        if (this.burnCount >= GAME_CONFIG.BURN_REQUIRED_COUNT) {
+            this.burnCount = 0;
+            // 給予萬用牌
+            this.hand.push('wildcard');
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -156,7 +189,7 @@ export class GameState {
     }
 
     /**
-     * 增加抽牌次數（透過棄牌）
+     * 增加抽牌次數（透過棄牌/燒牌）
      */
     gainDrawChance() {
         this.drawsLeft++;
@@ -176,7 +209,14 @@ export class GameState {
      * 手牌回到棄牌堆
      */
     returnHandToDiscard() {
-        this.discardPile.push(...this.hand);
+        // 過濾掉萬用卡，萬用卡不進入棄牌堆（永久消失）
+        const wildcardCount = this.hand.filter(cardId => cardId === 'wildcard').length;
+        if (wildcardCount > 0) {
+            console.log(`關卡結束，手牌中的 ${wildcardCount} 張萬用卡永久消失`);
+        }
+
+        const cardsToDiscard = this.hand.filter(cardId => cardId !== 'wildcard');
+        this.discardPile.push(...cardsToDiscard);
         this.hand = [];
     }
 }

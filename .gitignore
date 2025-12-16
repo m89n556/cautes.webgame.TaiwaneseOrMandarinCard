@@ -1,0 +1,47 @@
+# OS 生成的文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 編輯器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 臨時文件
+*.log
+.cache/
+*.tmp
+
+# Node modules (如果未來使用)
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+
+# 備份文件
+*.bak
+*.backup
+*_backup
+
+# 原始文件（非模組化版本）
+origin.txt
+html/1126_ver.txt
+
+# Claude AI 文檔（本地筆記）
+claude/
+.claude/
+
+# 本地開發工具腳本
+start-dev-server.bat
+start-server.ps1
+*.bat
+*.ps1
+
+# 測試文件
+test_*.js
+test_*.html

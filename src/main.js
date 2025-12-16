@@ -39,6 +39,11 @@ class Game {
             handContainer: DOMHelpers.$('hand-container'),
             questionContainer: DOMHelpers.$('question-container'),
             discardZone: DOMHelpers.$('discard-zone'),
+            discardCountBadge: DOMHelpers.$('discard-count-badge'), // New
+            burnZone: DOMHelpers.$('burn-zone'), // New
+            burnCount: DOMHelpers.$('burn-count'), // New
+            burnProgressBar: DOMHelpers.$('burn-progress-bar'), // New
+            wildcardOverlay: DOMHelpers.$('wildcard-overlay'), // New
             dragArrow: DOMHelpers.$('drag-arrow'),
             arrowHead: DOMHelpers.$('arrow-head'),
             feedbackContainer: DOMHelpers.$('feedback-container'),
@@ -46,7 +51,7 @@ class Game {
             drawCount: DOMHelpers.$('draw-count'),
             deckCount: DOMHelpers.$('deck-count'),
             deckList: DOMHelpers.$('deck-list'),
-            discardCount: DOMHelpers.$('discard-count'),
+            discardCount: DOMHelpers.$('discard-count'), // Keep for compatibility or remove if unused
             discardList: DOMHelpers.$('discard-list'),
             scoreTW: DOMHelpers.$('score-tw'),
             scoreSC: DOMHelpers.$('score-sc'),
@@ -93,10 +98,81 @@ class Game {
      */
     initDragSystem() {
         this.dragSystem = new DragSystem(this.state, this.els, {
-            onCardPlayed: (card, slotIndex) => this.playCard(card, slotIndex),
+            onCardPlayed: (card, slotIndex, extraData) => this.playCard(card, slotIndex, extraData),
             onCardDiscarded: (card) => this.discardCard(card),
-            onCardReturned: () => this.updateHandLayout()
+            onCardBurned: (card) => this.burnCard(card),
+            onCardReturned: () => this.updateHandLayout(),
+            onWildcardHover: (slotIndex, choice, x, y) => this.onWildcardHover(slotIndex, choice, x, y),
+            onWildcardHoverEnd: () => this.onWildcardHoverEnd()
         });
+    }
+
+    /**
+     * 萬用牌懸停效果
+     */
+    onWildcardHover(slotIndex, choice, x, y) {
+        const currentLevel = this.state.getCurrentLevel();
+        const category = currentLevel.categories[slotIndex];
+
+        // 取得對應的支語和台灣牌
+        const cnCardId = `${category}_cn`;
+        const twCardId = `${category}_tw`;
+        const cnData = this.dataManager.getCard(cnCardId);
+        const twData = this.dataManager.getCard(twCardId);
+
+        if (!cnData || !twData) return;
+
+        // 顯示 Overlay
+        DOMHelpers.removeClass(this.els.wildcardOverlay, 'hidden');
+
+        // 建立或更新左右選項預覽
+        // 這裡我們直接用 innerHTML 更新，效能可能稍差但實作簡單
+        // 根據 choice 高亮對應邊
+        const cnOpacity = choice === 'cn' ? '1' : '0.4';
+        const twOpacity = choice === 'tw' ? '1' : '0.4';
+        const cnScale = choice === 'cn' ? 'scale(1.1)' : 'scale(0.9)';
+        const twScale = choice === 'tw' ? 'scale(1.1)' : 'scale(0.9)';
+
+        // 計算顯示位置：在游標左右兩側
+        const gap = GAME_CONFIG.VISUAL.CARD_GAP;
+        const cardW = GAME_CONFIG.VISUAL.CARD_WIDTH;
+        const cardH = GAME_CONFIG.VISUAL.CARD_HEIGHT;
+
+        this.els.wildcardOverlay.innerHTML = `
+            <div class="absolute transition-all duration-200 pointer-events-none flex flex-col items-center" 
+                 style="left: ${x - gap - cardW / 2}px; top: ${y - cardH / 2}px; opacity: ${cnOpacity}; transform: ${cnScale}">
+                <div class="w-24 h-36 bg-gradient-to-br ${cnData.colorClass} rounded-xl shadow-2xl border-4 ${cnData.borderClass} flex flex-col items-center">
+                    <div class="w-full h-20 ${cnData.iconBg} rounded-t-lg flex items-center justify-center text-3xl border-b-2 border-white/20">
+                        ${cnData.icon}
+                    </div>
+                    <div class="flex-grow flex items-center justify-center w-full bg-white rounded-b-lg">
+                        <div class="font-bold text-sm text-slate-800">${cnData.name}</div>
+                    </div>
+                </div>
+                <div class="mt-2 text-red-400 font-bold text-shadow">支語</div>
+            </div>
+
+            <div class="absolute transition-all duration-200 pointer-events-none flex flex-col items-center" 
+                 style="left: ${x + gap - cardW / 2}px; top: ${y - cardH / 2}px; opacity: ${twOpacity}; transform: ${twScale}">
+                <div class="w-24 h-36 bg-gradient-to-br ${twData.colorClass} rounded-xl shadow-2xl border-4 ${twData.borderClass} flex flex-col items-center">
+                    <div class="w-full h-20 ${twData.iconBg} rounded-t-lg flex items-center justify-center text-3xl border-b-2 border-white/20">
+                        ${twData.icon}
+                    </div>
+                    <div class="flex-grow flex items-center justify-center w-full bg-white rounded-b-lg">
+                        <div class="font-bold text-sm text-slate-800">${twData.name}</div>
+                    </div>
+                </div>
+                <div class="mt-2 text-green-400 font-bold text-shadow">台灣</div>
+            </div>
+        `;
+    }
+
+    /**
+     * 結束萬用牌懸停
+     */
+    onWildcardHoverEnd() {
+        DOMHelpers.addClass(this.els.wildcardOverlay, 'hidden');
+        this.els.wildcardOverlay.innerHTML = '';
     }
 
     /**
@@ -120,7 +196,10 @@ class Game {
         DOMHelpers.$('dev-clear-levels-btn').onclick = () => this.devClearLevels();
 
         // Draft Screen
-        DOMHelpers.$('confirm-draft-btn').onclick = () => this.finishDraft();
+        DOMHelpers.$('confirm-draft-btn').onclick = () => {
+            // alert("Confirm Draft Clicked!"); // Debug
+            this.finishDraft();
+        };
 
         // Game UI
         DOMHelpers.$('restart-btn').onclick = () => this.restart();
@@ -146,11 +225,11 @@ class Game {
                     if (!el.classList.contains('active')) {
                         DOMHelpers.addClass(el, 'hidden');
                     }
-                }, 500);
+                }, GAME_CONFIG.VISUAL.ANIMATION_DURATION_NORMAL);
             }
         });
         DOMHelpers.removeClass(target, 'hidden');
-        setTimeout(() => DOMHelpers.addClass(target, 'active'), 20);
+        setTimeout(() => DOMHelpers.addClass(target, 'active'), GAME_CONFIG.VISUAL.ANIMATION_DURATION_SHORT / 10); // 20ms -> ~20ms, using short/10 for now or just keep 20 if it's a micro delay. Let's stick to 20 or define a MICRO delay. The plan said 200ms for short. 20ms is very short. Let's keep 20 or add a new constant. The plan didn't specify MICRO. I'll use 20 for now as it's likely a frame delay.
         this.currentScreen = screenName;
     }
 
@@ -325,11 +404,21 @@ class Game {
         const cnCards = this.dataManager.getCNCards();
         const twCards = this.dataManager.getTWCards();
 
+        // Debug: 檢查是否包含萬用卡
+        console.log('CN Cards:', cnCards);
+        console.log('TW Cards:', twCards);
+        console.log('Contains wildcard in CN?', cnCards.includes('wildcard'));
+        console.log('Contains wildcard in TW?', twCards.includes('wildcard'));
+
         this.state.draftOptions = [
             ...MathHelpers.randomPick(cnCards, 4),
             ...MathHelpers.randomPick(twCards, 2)
         ];
         this.state.draftOptions = MathHelpers.shuffle(this.state.draftOptions);
+
+        // Debug: 檢查選項中是否有萬用卡
+        console.log('Draft options:', this.state.draftOptions);
+        console.log('Contains wildcard in options?', this.state.draftOptions.includes('wildcard'));
 
         this.renderDraftScreen();
         this.switchScreen('draft');
@@ -380,6 +469,7 @@ class Game {
         if (selectedEls.length === 4) {
             DOMHelpers.removeClass(this.els.confirmDraftBtn, 'btn-disabled');
             this.els.confirmDraftBtn.disabled = false;
+            // alert("Button Enabled!"); // Debug
         } else {
             DOMHelpers.addClass(this.els.confirmDraftBtn, 'btn-disabled');
             this.els.confirmDraftBtn.disabled = true;
@@ -390,50 +480,62 @@ class Game {
      * 完成選牌
      */
     finishDraft() {
-        const selectedEls = Array.from(DOMHelpers.$$('.draft-card.selected'));
-        const allCardEls = Array.from(this.els.draftContainer.children);
-        const selectedCards = selectedEls.map(el => {
-            const idx = allCardEls.indexOf(el);
-            return this.state.draftOptions[idx];
-        });
-        this.state.deck = selectedCards;
-        this.initGame();
+        try {
+            const selectedEls = Array.from(DOMHelpers.$$('.draft-card.selected'));
+            const allCardEls = Array.from(this.els.draftContainer.children);
+            const selectedCards = selectedEls.map(el => {
+                const idx = allCardEls.indexOf(el);
+                return this.state.draftOptions[idx];
+            });
+            this.state.deck = selectedCards;
+            this.initGame();
+        } catch (e) {
+            alert("Error in finishDraft: " + e.message);
+            console.error(e);
+        }
     }
 
     /**
      * 初始化遊戲
      */
     initGame() {
-        DOMHelpers.hide(this.els.overlay);
+        try {
+            DOMHelpers.hide(this.els.overlay);
 
-        // 準備關卡順序（按難度排序）
-        const allLevels = this.dataManager.getAllLevels();
-        const levelsByDiff = {};
-        allLevels.forEach(l => {
-            const diff = l.categories.length;
-            if (!levelsByDiff[diff]) levelsByDiff[diff] = [];
-            levelsByDiff[diff].push(l);
-        });
+            // 準備關卡順序（按難度排序）
+            const allLevels = this.dataManager.getAllLevels();
+            const levelsByDiff = {};
+            allLevels.forEach(l => {
+                const diff = l.categories.length;
+                if (!levelsByDiff[diff]) levelsByDiff[diff] = [];
+                levelsByDiff[diff].push(l);
+            });
 
-        this.state.levelOrder = [];
-        Object.keys(levelsByDiff).sort((a, b) => a - b).forEach(diff => {
-            const group = MathHelpers.shuffle(levelsByDiff[diff]);
-            this.state.levelOrder.push(...group);
-        });
+            this.state.levelOrder = [];
+            Object.keys(levelsByDiff).sort((a, b) => a - b).forEach(diff => {
+                const group = MathHelpers.shuffle(levelsByDiff[diff]);
+                this.state.levelOrder.push(...group);
+            });
 
-        this.state.levelIndex = 0;
-        this.state.deck = MathHelpers.shuffle(this.state.deck);
-        this.state.hand = [];
-        this.state.discardPile = [];
-        this.state.drawsLeft = GAME_CONFIG.INITIAL_DRAW_COUNT;
+            this.state.levelIndex = 0;
+            this.state.deck = MathHelpers.shuffle(this.state.deck);
+            this.state.hand = [];
+            this.state.discardPile = [];
+            this.state.drawsLeft = GAME_CONFIG.INITIAL_DRAW_COUNT;
+            this.state.burnCount = 0; // 重置燒牌
 
-        this.updateScores();
-        this.updateStrikes();
-        this.updateDeckUI();
-        this.updateDiscardUI();
+            this.updateScores();
+            this.updateStrikes();
+            this.updateDeckUI();
+            this.updateDiscardUI();
+            this.updateBurnUI(); // New
 
-        this.switchScreen('game');
-        this.startLevel();
+            this.switchScreen('game');
+            this.startLevel();
+        } catch (e) {
+            alert("Error in initGame: " + e.message);
+            console.error(e);
+        }
     }
 
     /**
@@ -463,6 +565,7 @@ class Game {
         // 抽初始手牌
         this.state.drawCardsUntil(GAME_CONFIG.INITIAL_HAND_SIZE);
         this.renderHand();
+        this.updateDeckUI();
     }
 
     /**
@@ -527,7 +630,7 @@ class Game {
             if (this.state.draggingCard === card) return;
             const angle = (index - centerIndex) * this.state.fanAngleSep;
             const yOffset = Math.abs(angle) * 3;
-            const xSpread = (index - centerIndex) * 120;
+            const xSpread = (index - centerIndex) * GAME_CONFIG.VISUAL.HAND_FAN_SPREAD;
 
             card.style.left = '50%';
             card.style.bottom = `${this.state.fanBaseY}px`;
@@ -542,7 +645,7 @@ class Game {
     /**
      * 打出卡牌
      */
-    playCard(cardEl, slotIndex) {
+    playCard(cardEl, slotIndex, extraData) {
         const cardId = cardEl.dataset.id;
         const cardData = this.dataManager.getCard(cardId);
         const currentLevel = this.state.getCurrentLevel();
@@ -552,7 +655,30 @@ class Game {
         let color = "";
         let isMismatch = false;
 
-        if (cardData.category === targetCategory) {
+        // 萬用牌邏輯
+        if (cardId === 'wildcard') {
+            const choice = extraData ? extraData.choice : 'tw'; // 預設 TW
+
+            if (choice === 'tw') {
+                this.state.updateScores(GAME_CONFIG.SCORE_WILDCARD_TW, 0);
+                msg = "勉強接受...";
+                color = "text-green-300";
+                // 視覺上顯示台灣牌
+                const twCardData = this.dataManager.getCard(`${targetCategory}_tw`);
+                this.fillSlotVisual(slotIndex, twCardData || cardData);
+            } else {
+                this.state.updateScores(0, GAME_CONFIG.SCORE_WILDCARD_SC);
+                msg = "勉強聽懂...";
+                color = "text-red-300";
+                // 視覺上顯示支語牌
+                const cnCardData = this.dataManager.getCard(`${targetCategory}_cn`);
+                this.fillSlotVisual(slotIndex, cnCardData || cardData);
+            }
+
+            this.state.fillSlot(slotIndex, cardId);
+
+        } else if (cardData.category === targetCategory) {
+            // 正常卡牌邏輯
             if (cardData.isTW) {
                 this.state.updateScores(GAME_CONFIG.SCORE_DELTA_CORRECT, -GAME_CONFIG.SCORE_DELTA_CORRECT);
                 msg = "台灣價值 UP！";
@@ -566,6 +692,7 @@ class Game {
             this.state.fillSlot(slotIndex, cardId);
             this.fillSlotVisual(slotIndex, cardData);
         } else {
+            // 錯誤邏輯
             isMismatch = true;
             const isGameOver = this.state.addMistake();
             this.updateStrikes();
@@ -574,7 +701,7 @@ class Game {
 
             if (isGameOver) {
                 AnimationUtils.showFloatingMessage(this.els.feedbackContainer, msg, color);
-                setTimeout(() => this.endGame(false), 1000);
+                setTimeout(() => this.endGame(false), GAME_CONFIG.VISUAL.ANIMATION_DURATION_LONG);
                 return;
             }
         }
@@ -593,13 +720,14 @@ class Game {
 
             if (isLevelDone) {
                 if (!this.state.hasNextLevel()) {
-                    setTimeout(() => this.endGame(true), 1000);
+                    setTimeout(() => this.endGame(true), GAME_CONFIG.VISUAL.ANIMATION_DURATION_LONG);
                 } else {
-                    setTimeout(() => this.goToReward(), 1000);
+                    setTimeout(() => this.goToReward(), GAME_CONFIG.VISUAL.ANIMATION_DURATION_LONG);
                 }
             } else {
                 this.state.drawCardsUntil(GAME_CONFIG.INITIAL_HAND_SIZE);
                 this.renderHand();
+                this.updateDeckUI();
             }
         });
     }
@@ -621,20 +749,59 @@ class Game {
     }
 
     /**
-     * 棄牌
+     * 棄牌 (垃圾桶 - 一換一)
      */
     discardCard(cardEl) {
         const cardId = cardEl.dataset.id;
-        this.state.discardCard(cardId);
-        this.state.gainDrawChance();
 
-        AnimationUtils.showFloatingMessage(this.els.feedbackContainer, "棄牌！", "text-gray-400");
+        // 執行棄牌邏輯
+        if (this.state.discardCard(cardId)) {
+            // 獲得抽牌機會
+            this.state.gainDrawChance();
+
+            AnimationUtils.showFloatingMessage(this.els.feedbackContainer, "棄牌換抽！", "text-indigo-400");
+
+            AnimationUtils.vanishCard(cardEl, () => {
+                this.updateDiscardUI();
+                this.updateDrawBtn();
+                this.updateHandLayout();
+            });
+        }
+    }
+
+    /**
+     * 燒牌 (獻祭 - 累積萬用牌)
+     */
+    burnCard(cardEl) {
+        const cardId = cardEl.dataset.id;
+
+        // 執行燒牌邏輯
+        const gainedWildcard = this.state.burnCard(cardId);
+
+        AnimationUtils.showFloatingMessage(this.els.feedbackContainer, "燒牌！", "text-orange-500");
 
         AnimationUtils.vanishCard(cardEl, () => {
-            this.updateDiscardUI();
+            this.updateBurnUI(); // 更新燒牌進度
             this.updateHandLayout();
-            this.updateDrawBtn();
+
+            // 如果獲得萬用牌
+            if (gainedWildcard) {
+                AnimationUtils.showFloatingMessage(this.els.feedbackContainer, "獲得萬用牌！", "text-yellow-400");
+                this.renderHand(); // 重新渲染手牌以顯示萬用牌
+            }
         });
+    }
+
+    /**
+     * 更新燒牌 UI
+     */
+    updateBurnUI() {
+        const count = this.state.burnCount;
+        const max = GAME_CONFIG.BURN_REQUIRED_COUNT;
+        const percentage = (count / max) * 100;
+
+        this.els.burnCount.textContent = `${count}/${max}`;
+        this.els.burnProgressBar.style.height = `${percentage}%`;
     }
 
     /**
@@ -812,7 +979,9 @@ class Game {
      * 更新棄牌堆 UI
      */
     updateDiscardUI() {
-        this.els.discardCount.textContent = this.state.discardPile.length;
+        if (this.els.discardCountBadge) {
+            this.els.discardCountBadge.textContent = this.state.discardPile.length;
+        }
         this.els.discardList.innerHTML = '';
 
         if (this.state.discardPile.length === 0) {

@@ -110,5 +110,14 @@ export const DEFAULT_CARDS = {
         colorClass: 'from-purple-50 to-purple-200',
         borderClass: 'border-purple-400',
         iconBg: 'bg-purple-100'
+    },
+    'wildcard': {
+        name: '萬用牌',
+        icon: '🃏',
+        category: 'wildcard',
+        isTW: null, // 特殊：中立
+        colorClass: 'from-yellow-100 to-yellow-300',
+        borderClass: 'border-yellow-500',
+        iconBg: 'bg-yellow-200'
     }
 };
