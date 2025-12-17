@@ -182,10 +182,20 @@ export class DragSystem {
             // 燒牌 (火坑)
             this.callbacks.onCardBurned(card);
         } else {
-            // 放回手牌
-            card.style.transform = '';
-            if (this.callbacks.onCardReturned) {
-                setTimeout(() => this.callbacks.onCardReturned(), 300);
+            // 檢查是否是從輪盤拖曳的卡片
+            const isFromWheel = card.dataset.fromWheel === 'true';
+
+            if (isFromWheel) {
+                // 從輪盤拖曳的卡片：添加到手牌
+                if (this.callbacks.onWheelCardToHand) {
+                    this.callbacks.onWheelCardToHand(card.dataset.cardId);
+                }
+            } else {
+                // 原本在手牌中的卡片：放回手牌
+                card.style.transform = '';
+                if (this.callbacks.onCardReturned) {
+                    setTimeout(() => this.callbacks.onCardReturned(), 300);
+                }
             }
         }
     }

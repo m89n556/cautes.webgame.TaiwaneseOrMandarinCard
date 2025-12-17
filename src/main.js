@@ -110,7 +110,8 @@ class Game {
             onCardBurned: (card) => this.burnCard(card),
             onCardReturned: () => this.updateHandLayout(),
             onWildcardHover: (slotIndex, choice, x, y) => this.onWildcardHover(slotIndex, choice, x, y),
-            onWildcardHoverEnd: () => this.onWildcardHoverEnd()
+            onWildcardHoverEnd: () => this.onWildcardHoverEnd(),
+            onWheelCardToHand: (cardId) => this.addWheelCardToHand(cardId)
         });
     }
 
@@ -129,22 +130,44 @@ class Game {
     onWheelSpinComplete(cardId) {
         console.log('Wheel stopped at:', cardId);
 
-        // 顯示當前選中的詞語
+        // 顯示當前選中的詞語為可拖曳的卡片
         if (this.els.wheelCurrentWord && cardId) {
             const cardData = this.dataManager.getCard(cardId);
             if (cardData) {
+                // 渲染成標準的 game-card 格式（可拖曳）
                 this.els.wheelCurrentWord.innerHTML = `
-                    <div class="bg-gradient-to-br ${cardData.colorClass} rounded-lg p-3 shadow-lg border-2 ${cardData.borderClass}
-                         flex flex-col items-center gap-2 animate-bounce-in">
-                        <div class="text-3xl">${cardData.icon}</div>
-                        <div class="font-bold text-sm text-slate-800">${cardData.name}</div>
-                        <div class="text-xs ${cardData.isTW ? 'text-blue-600' : 'text-red-600'}">
-                            ${cardData.isTW ? '台灣' : '支語'}
+                    <div class="game-card wheel-card bg-gradient-to-br ${cardData.colorClass} rounded-xl shadow-2xl border-4 ${cardData.borderClass}
+                         w-24 h-36 flex flex-col items-center cursor-grab animate-bounce-in select-none"
+                         data-card-id="${cardId}"
+                         data-from-wheel="true">
+                        <div class="w-full h-20 ${cardData.iconBg} rounded-t-lg flex items-center justify-center text-3xl border-b-2 border-white/20">
+                            ${cardData.icon}
+                        </div>
+                        <div class="flex-grow flex items-center justify-center w-full bg-white rounded-b-lg">
+                            <div class="font-bold text-sm text-slate-800">${cardData.name}</div>
                         </div>
                     </div>
                 `;
             }
         }
+    }
+
+    /**
+     * 將輪盤卡片添加到手牌
+     */
+    addWheelCardToHand(cardId) {
+        console.log('Adding wheel card to hand:', cardId);
+
+        // 添加到手牌狀態
+        this.state.hand.push(cardId);
+
+        // 清空輪盤選中詞語顯示
+        if (this.els.wheelCurrentWord) {
+            this.els.wheelCurrentWord.innerHTML = '';
+        }
+
+        // 重新渲染手牌
+        this.renderHand();
     }
 
     /**
@@ -699,7 +722,9 @@ class Game {
      * 打出卡牌
      */
     playCard(cardEl, slotIndex, extraData) {
-        const cardId = cardEl.dataset.id;
+        // 支援輪盤卡片（使用 cardId）和手牌卡片（使用 id）
+        const cardId = cardEl.dataset.cardId || cardEl.dataset.id;
+        const isFromWheel = cardEl.dataset.fromWheel === 'true';
         const cardData = this.dataManager.getCard(cardId);
         const currentLevel = this.state.getCurrentLevel();
         const targetCategory = currentLevel.categories[slotIndex];
@@ -762,8 +787,15 @@ class Game {
         AnimationUtils.showFloatingMessage(this.els.feedbackContainer, msg, color);
         this.updateScores();
 
-        this.state.playCard(cardId);
-        this.updateDiscardUI();
+        // 如果是從輪盤拖曳的卡片，清空輪盤顯示；否則從手牌移除
+        if (isFromWheel) {
+            if (this.els.wheelCurrentWord) {
+                this.els.wheelCurrentWord.innerHTML = '';
+            }
+        } else {
+            this.state.playCard(cardId);
+            this.updateDiscardUI();
+        }
 
         AnimationUtils.vanishCard(cardEl, () => {
             this.updateHandLayout();
