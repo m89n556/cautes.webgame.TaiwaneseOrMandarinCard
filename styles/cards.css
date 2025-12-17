@@ -66,3 +66,18 @@
     box-shadow: 0 0 20px #ef4444;
     transform: scale(1.1);
 }
+
+/* 輔助卡牌樣式 */
+.helper-card {
+    cursor: pointer !important;
+}
+
+.helper-card:not(.is-dragging):hover {
+    z-index: 100 !important;
+    transform: translate3d(var(--tx), calc(var(--ty) - 40px), 1px) rotate(var(--rot)) scale(1.15) !important;
+    box-shadow: 0 20px 25px -5px rgba(168, 85, 247, 0.5), 0 10px 10px -5px rgba(168, 85, 247, 0.3);
+}
+
+.helper-card:active {
+    transform: translate3d(var(--tx), calc(var(--ty) - 35px), 1px) rotate(var(--rot)) scale(1.1) !important;
+}

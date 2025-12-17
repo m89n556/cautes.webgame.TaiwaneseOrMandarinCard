@@ -41,6 +41,9 @@ export class DragSystem {
         const card = e.target.closest('.game-card');
         if (!card) return;
 
+        // 輔助卡牌不可拖曳（使用點擊）
+        if (e.target.closest('.helper-card')) return;
+
         e.preventDefault();
 
         this.state.draggingCard = card;

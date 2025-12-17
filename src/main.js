@@ -171,6 +171,26 @@ class Game {
     }
 
     /**
+     * 使用輔助卡牌
+     * @param {string} cardId - 輔助卡ID
+     * @param {string} effect - 效果類型（'spin', 'left', 'right'）
+     */
+    useHelperCard(cardId, effect) {
+        console.log('Using helper card:', cardId, effect);
+
+        // Commit 7 會實作完整功能
+        // 目前只提供視覺反饋
+        const cardData = HELPER_CARDS[cardId];
+        if (cardData) {
+            AnimationUtils.showFloatingMessage(
+                this.els.feedbackContainer,
+                `使用：${cardData.name}（功能即將開放）`,
+                "text-purple-400"
+            );
+        }
+    }
+
+    /**
      * 萬用牌懸停效果
      */
     onWildcardHover(slotIndex, choice, x, y) {
@@ -591,7 +611,10 @@ class Game {
 
             this.state.levelIndex = 0;
             this.state.deck = MathHelpers.shuffle(this.state.deck);
-            this.state.hand = [];
+
+            // 初始化手牌：添加3張初始輔助卡牌
+            this.state.hand = [...GAME_CONFIG.INITIAL_HELPER_CARDS];
+
             // this.state.discardPile = []; // Removed in new system
             // this.state.drawsLeft = GAME_CONFIG.INITIAL_DRAW_COUNT; // Removed
             // this.state.burnCount = 0; // Removed
@@ -669,26 +692,57 @@ class Game {
     }
 
     /**
-     * 渲染手牌
+     * 渲染手牌（包含詞語卡牌和輔助卡牌）
      */
     renderHand() {
         this.els.handContainer.innerHTML = '';
         this.state.hand.forEach((cardId, index) => {
-            const data = this.dataManager.getCard(cardId);
-            if (!data) return;
-            const el = DOMHelpers.create('div',
-                `card game-card w-28 h-44 md:w-36 md:h-52 bg-gradient-to-br ${data.colorClass} rounded-xl shadow-2xl border-4 ${data.borderClass} flex flex-col items-center cursor-grab`,
-                `
-                <div class="w-full h-32 ${data.iconBg} rounded-t-lg flex items-center justify-center text-5xl border-b-2 border-white/20">
-                    ${data.icon}
-                </div>
-                <div class="flex-grow flex items-center justify-center w-full bg-white rounded-b-lg">
-                    <div class="font-black text-2xl text-slate-800 tracking-widest">${data.name}</div>
-                </div>
-            `);
-            el.dataset.id = cardId;
-            el.dataset.index = index;
-            this.els.handContainer.appendChild(el);
+            // 先嘗試從詞語卡片中獲取
+            let data = this.dataManager.getCard(cardId);
+            let isHelperCard = false;
+
+            // 如果找不到，可能是輔助卡牌
+            if (!data) {
+                data = HELPER_CARDS[cardId];
+                isHelperCard = true;
+            }
+
+            if (!data) return; // 找不到任何卡片數據
+
+            if (isHelperCard) {
+                // 渲染輔助卡牌（可點擊，不可拖曳）
+                const el = DOMHelpers.create('div',
+                    `card helper-card w-28 h-44 md:w-36 md:h-52 bg-gradient-to-br ${data.colorClass} rounded-xl shadow-2xl border-4 ${data.borderClass} flex flex-col items-center cursor-pointer select-none`,
+                    `
+                    <div class="w-full h-32 ${data.iconBg} rounded-t-lg flex items-center justify-center text-5xl border-b-2 border-white/20">
+                        ${data.icon}
+                    </div>
+                    <div class="flex-grow flex items-center justify-center w-full bg-white rounded-b-lg px-2">
+                        <div class="font-black text-xl md:text-2xl text-slate-800 tracking-wide text-center">${data.name}</div>
+                    </div>
+                `);
+                el.dataset.id = cardId;
+                el.dataset.index = index;
+                el.dataset.helperType = data.effect;
+                // 綁定點擊事件
+                el.onclick = () => this.useHelperCard(cardId, data.effect);
+                this.els.handContainer.appendChild(el);
+            } else {
+                // 渲染詞語卡牌（可拖曳）
+                const el = DOMHelpers.create('div',
+                    `card game-card w-28 h-44 md:w-36 md:h-52 bg-gradient-to-br ${data.colorClass} rounded-xl shadow-2xl border-4 ${data.borderClass} flex flex-col items-center cursor-grab select-none`,
+                    `
+                    <div class="w-full h-32 ${data.iconBg} rounded-t-lg flex items-center justify-center text-5xl border-b-2 border-white/20">
+                        ${data.icon}
+                    </div>
+                    <div class="flex-grow flex items-center justify-center w-full bg-white rounded-b-lg">
+                        <div class="font-black text-2xl text-slate-800 tracking-widest">${data.name}</div>
+                    </div>
+                `);
+                el.dataset.id = cardId;
+                el.dataset.index = index;
+                this.els.handContainer.appendChild(el);
+            }
         });
         this.updateHandLayout();
     }
