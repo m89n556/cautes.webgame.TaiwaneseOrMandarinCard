@@ -1013,27 +1013,29 @@ class Game {
     }
 
     /**
-     * 前往獎勵畫面
+     * 前往獎勵畫面（輔助卡牌獎勵）
      */
     goToReward() {
-        const cnCards = MathHelpers.randomPick(this.dataManager.getCNCards(), 2);
-        const twCards = MathHelpers.randomPick(this.dataManager.getTWCards(), 1);
-        const rewardOptions = MathHelpers.shuffle([...cnCards, ...twCards]);
+        // 提供所有3種輔助卡作為獎勵選項
+        const helperCardIds = Object.keys(HELPER_CARDS);
+        const rewardOptions = helperCardIds; // 全部提供選擇
 
         this.els.rewardContainer.innerHTML = '';
         rewardOptions.forEach(cardId => {
-            const data = this.dataManager.getCard(cardId);
+            const data = HELPER_CARDS[cardId];
+            if (!data) return;
+
             const cardEl = DOMHelpers.create('div',
-                `draft-card w-28 h-44 bg-gradient-to-br ${data.colorClass} rounded-xl shadow-lg border-4 ${data.borderClass} flex flex-col items-center hover:scale-105 transition-transform`,
+                `draft-card w-28 h-44 bg-gradient-to-br ${data.colorClass} rounded-xl shadow-lg border-4 ${data.borderClass} flex flex-col items-center hover:scale-105 transition-transform cursor-pointer`,
                 `
                 <div class="w-full h-2/3 ${data.iconBg} rounded-t-lg flex items-center justify-center text-5xl border-b-2 border-white/20 pointer-events-none">
                     ${data.icon}
                 </div>
-                <div class="flex-grow flex items-center justify-center w-full bg-white rounded-b-lg pointer-events-none">
-                    <div class="font-bold text-xl text-slate-800 tracking-widest">${data.name}</div>
+                <div class="flex-grow flex items-center justify-center w-full bg-white rounded-b-lg px-2 pointer-events-none">
+                    <div class="font-bold text-lg text-slate-800 tracking-wide text-center">${data.name}</div>
                 </div>
             `);
-            cardEl.onclick = () => this.selectReward(cardId);
+            cardEl.onclick = () => this.selectReward(cardId, true); // true 表示是輔助卡
             this.els.rewardContainer.appendChild(cardEl);
         });
 
@@ -1042,10 +1044,25 @@ class Game {
 
     /**
      * 選擇獎勵
+     * @param {string} cardId - 卡片ID
+     * @param {boolean} isHelperCard - 是否為輔助卡牌
      */
-    selectReward(cardId) {
-        this.state.deck.push(cardId);
-        this.updateDeckUI();
+    selectReward(cardId, isHelperCard = false) {
+        if (isHelperCard) {
+            // 輔助卡牌直接加入手牌
+            this.state.hand.push(cardId);
+            this.renderHand();
+            AnimationUtils.showFloatingMessage(
+                this.els.feedbackContainer,
+                `獲得輔助卡：${HELPER_CARDS[cardId].name}！`,
+                "text-purple-400"
+            );
+        } else {
+            // 詞語卡牌加入牌庫（舊系統）
+            this.state.deck.push(cardId);
+            this.updateDeckUI();
+        }
+
         this.switchScreen('game');
         this.nextLevel();
     }
