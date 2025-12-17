@@ -178,16 +178,70 @@ class Game {
     useHelperCard(cardId, effect) {
         console.log('Using helper card:', cardId, effect);
 
-        // Commit 7 會實作完整功能
-        // 目前只提供視覺反饋
+        if (!this.wheelSystem) {
+            console.error('Wheel system not initialized');
+            return;
+        }
+
         const cardData = HELPER_CARDS[cardId];
-        if (cardData) {
+        if (!cardData) return;
+
+        // 檢查輪盤狀態
+        if (this.wheelSystem.isSpinning) {
             AnimationUtils.showFloatingMessage(
                 this.els.feedbackContainer,
-                `使用：${cardData.name}（功能即將開放）`,
-                "text-purple-400"
+                "輪盤旋轉中，請稍候！",
+                "text-yellow-400"
             );
+            return;
         }
+
+        // 從手牌移除輔助卡
+        const cardIndex = this.state.hand.indexOf(cardId);
+        if (cardIndex === -1) return;
+
+        this.state.hand.splice(cardIndex, 1);
+
+        // 執行對應效果
+        switch (effect) {
+            case 'spin':
+                // 再轉一次：重置輪盤並開始旋轉
+                this.wheelSystem.resetSpin();
+                this.wheelSystem.toggleSpin();
+                AnimationUtils.showFloatingMessage(
+                    this.els.feedbackContainer,
+                    `✨ ${cardData.name}！`,
+                    "text-purple-400"
+                );
+                break;
+
+            case 'left':
+                // 指針左移一格
+                this.wheelSystem.movePointer('left');
+                AnimationUtils.showFloatingMessage(
+                    this.els.feedbackContainer,
+                    `⬅ ${cardData.name}！`,
+                    "text-purple-400"
+                );
+                break;
+
+            case 'right':
+                // 指針右移一格
+                this.wheelSystem.movePointer('right');
+                AnimationUtils.showFloatingMessage(
+                    this.els.feedbackContainer,
+                    `➡ ${cardData.name}！`,
+                    "text-purple-400"
+                );
+                break;
+
+            default:
+                console.error('Unknown helper card effect:', effect);
+                return;
+        }
+
+        // 重新渲染手牌（移除已使用的輔助卡）
+        this.renderHand();
     }
 
     /**
