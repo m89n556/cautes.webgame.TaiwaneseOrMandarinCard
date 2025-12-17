@@ -801,7 +801,7 @@ class Game {
             }
         } else {
             this.state.playCard(cardId);
-            this.updateDiscardUI();
+            // updateDiscardUI() 已移除
         }
 
         AnimationUtils.vanishCard(cardEl, () => {
@@ -889,9 +889,9 @@ class Game {
                 "text-purple-400"
             );
         } else {
-            // 詞語卡牌加入牌庫（舊系統）
+            // 詞語卡牌加入牌庫（舊系統，已不再使用）
             this.state.deck.push(cardId);
-            this.updateDeckUI();
+            // updateDeckUI() 已移除
         }
 
         this.switchScreen('game');
@@ -992,67 +992,9 @@ class Game {
         });
     }
 
-    /**
-     * 更新牌庫 UI
-     */
-    updateDeckUI() {
-        this.els.deckCount.textContent = this.state.deck.length;
-        this.els.deckList.innerHTML = '';
-
-        if (this.state.deck.length === 0) {
-            this.els.deckList.innerHTML = '<li class="text-slate-500 italic">空空如也...</li>';
-            return;
-        }
-
-        const counts = {};
-        this.state.deck.forEach(id => counts[id] = (counts[id] || 0) + 1);
-        Object.keys(counts).forEach(id => {
-            const data = this.dataManager.getCard(id);
-            if (!data) return;
-            const li = DOMHelpers.create('li', 'flex justify-between text-slate-300',
-                `<span>${data.icon} ${data.name}</span> <span class="text-indigo-400 font-bold">x${counts[id]}</span>`
-            );
-            this.els.deckList.appendChild(li);
-        });
-    }
-
-    /**
-     * 更新棄牌堆 UI
-     */
-    updateDiscardUI() {
-        if (this.els.discardCountBadge) {
-            this.els.discardCountBadge.textContent = this.state.discardPile.length;
-        }
-        this.els.discardList.innerHTML = '';
-
-        if (this.state.discardPile.length === 0) {
-            this.els.discardList.innerHTML = '<li class="text-slate-500 italic">空空如也...</li>';
-            return;
-        }
-
-        const counts = {};
-        this.state.discardPile.forEach(id => counts[id] = (counts[id] || 0) + 1);
-        Object.keys(counts).forEach(id => {
-            const data = this.dataManager.getCard(id);
-            if (!data) return;
-            const li = DOMHelpers.create('li', 'flex justify-between text-slate-300',
-                `<span>${data.icon} ${data.name}</span> <span class="text-indigo-400 font-bold">x${counts[id]}</span>`
-            );
-            this.els.discardList.appendChild(li);
-        });
-    }
-
-    /**
-     * 更新抽牌按鈕
-     */
-    updateDrawBtn() {
-        this.els.drawCount.textContent = `剩餘: ${this.state.drawsLeft}`;
-        if (this.state.drawsLeft <= 0 || this.state.deck.length === 0) {
-            DOMHelpers.addClass(this.els.drawBtn, 'btn-disabled');
-        } else {
-            DOMHelpers.removeClass(this.els.drawBtn, 'btn-disabled');
-        }
-    }
+    // === 舊系統 UI 更新方法已移除（Commit 10）===
+    // updateDeckUI(), updateDiscardUI(), updateDrawBtn()
+    // 新系統不再需要這些 UI
 }
 
 // 啟動遊戲
