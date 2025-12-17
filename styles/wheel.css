@@ -148,13 +148,26 @@
     left: -8rem;
     top: 50%;
     transform: translateY(-50%);
-    opacity: 0;
-    transition: opacity 0.3s, transform 0.3s;
+    min-width: 6rem;
 }
 
-#wheel-current-word.show {
-    opacity: 1;
-    transform: translateY(-50%) scale(1.1);
+/* 卡片彈出動畫 */
+@keyframes bounce-in {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.animate-bounce-in {
+    animation: bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 /* 響應式設計 - 移動端 */

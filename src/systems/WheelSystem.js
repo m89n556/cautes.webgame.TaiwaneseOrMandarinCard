@@ -123,6 +123,11 @@ export class WheelSystem {
             this.spinSpeed = 30;  // 初始速度：30度/幀
             this.updateSpin();
 
+            // 清空當前選中詞語顯示
+            if (this.els.wheelCurrentWord) {
+                this.els.wheelCurrentWord.innerHTML = '';
+            }
+
             // 更新按鈕狀態
             if (this.els.wheelSpinBtn) {
                 this.els.wheelSpinBtn.textContent = '■';

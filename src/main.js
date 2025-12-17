@@ -128,7 +128,23 @@ class Game {
      */
     onWheelSpinComplete(cardId) {
         console.log('Wheel stopped at:', cardId);
-        // 顯示當前選中的詞語（Commit 4/5 會實作）
+
+        // 顯示當前選中的詞語
+        if (this.els.wheelCurrentWord && cardId) {
+            const cardData = this.dataManager.getCard(cardId);
+            if (cardData) {
+                this.els.wheelCurrentWord.innerHTML = `
+                    <div class="bg-gradient-to-br ${cardData.colorClass} rounded-lg p-3 shadow-lg border-2 ${cardData.borderClass}
+                         flex flex-col items-center gap-2 animate-bounce-in">
+                        <div class="text-3xl">${cardData.icon}</div>
+                        <div class="font-bold text-sm text-slate-800">${cardData.name}</div>
+                        <div class="text-xs ${cardData.isTW ? 'text-blue-600' : 'text-red-600'}">
+                            ${cardData.isTW ? '台灣' : '支語'}
+                        </div>
+                    </div>
+                `;
+            }
+        }
     }
 
     /**
@@ -229,6 +245,15 @@ class Game {
         DOMHelpers.$('restart-btn').onclick = () => this.restart();
         DOMHelpers.$('draw-btn').onclick = () => this.drawCard();
         // overlay-restart-btn 會在 endGame() 中動態綁定
+
+        // Wheel System
+        if (this.els.wheelSpinBtn) {
+            this.els.wheelSpinBtn.onclick = () => {
+                if (this.wheelSystem) {
+                    this.wheelSystem.toggleSpin();
+                }
+            };
+        }
 
         // Window Resize
         window.addEventListener('resize', () => {
