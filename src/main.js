@@ -106,8 +106,7 @@ class Game {
     initDragSystem() {
         this.dragSystem = new DragSystem(this.state, this.els, {
             onCardPlayed: (card, slotIndex, extraData) => this.playCard(card, slotIndex, extraData),
-            onCardDiscarded: (card) => this.discardCard(card),
-            onCardBurned: (card) => this.burnCard(card),
+            // onCardDiscarded, onCardBurned - 已移除
             onCardReturned: () => this.updateHandLayout(),
             onWildcardHover: (slotIndex, choice, x, y) => this.onWildcardHover(slotIndex, choice, x, y),
             onWildcardHoverEnd: () => this.onWildcardHoverEnd(),
@@ -317,7 +316,7 @@ class Game {
      */
     bindEvents() {
         // Start Screen
-        DOMHelpers.$('start-game-btn').onclick = () => this.goToDraft();
+        DOMHelpers.$('start-game-btn').onclick = () => this.startNewGame(); // 直接開始遊戲，跳過 Draft
         DOMHelpers.$('show-rules-btn').onclick = () => this.switchScreen('rules');
         DOMHelpers.$('dev-check-btn').onclick = () => this.checkDevMode();
 
@@ -332,15 +331,11 @@ class Game {
         DOMHelpers.$('dev-add-level-btn').onclick = () => this.devAddLevel();
         DOMHelpers.$('dev-clear-levels-btn').onclick = () => this.devClearLevels();
 
-        // Draft Screen
-        DOMHelpers.$('confirm-draft-btn').onclick = () => {
-            // alert("Confirm Draft Clicked!"); // Debug
-            this.finishDraft();
-        };
+        // Draft Screen - 已移除
 
         // Game UI
         DOMHelpers.$('restart-btn').onclick = () => this.restart();
-        DOMHelpers.$('draw-btn').onclick = () => this.drawCard();
+        // draw-btn, discard, burn - 已移除
         // overlay-restart-btn 會在 endGame() 中動態綁定
 
         // Wheel System
@@ -537,109 +532,21 @@ class Game {
     }
 
     /**
-     * 前往選牌畫面
+     * 開始新遊戲（跳過Draft，直接進入遊戲）
      */
-    goToDraft() {
+    startNewGame() {
         this.dataManager.refresh();
 
-        if (!this.dataManager.hasEnoughCards()) {
-            alert('錯誤：卡牌數量不足以進行遊戲 (需至少 4 張支語、2 張台灣牌)');
-            return;
-        }
+        // 新系統：不需要選牌，所有詞語都在輪盤上
+        // 初始化空牌庫（保留兼容性，實際不再使用）
+        this.state.deck = [];
 
-        const cnCards = this.dataManager.getCNCards();
-        const twCards = this.dataManager.getTWCards();
-
-        // Debug: 檢查是否包含萬用卡
-        console.log('CN Cards:', cnCards);
-        console.log('TW Cards:', twCards);
-        console.log('Contains wildcard in CN?', cnCards.includes('wildcard'));
-        console.log('Contains wildcard in TW?', twCards.includes('wildcard'));
-
-        this.state.draftOptions = [
-            ...MathHelpers.randomPick(cnCards, 4),
-            ...MathHelpers.randomPick(twCards, 2)
-        ];
-        this.state.draftOptions = MathHelpers.shuffle(this.state.draftOptions);
-
-        // Debug: 檢查選項中是否有萬用卡
-        console.log('Draft options:', this.state.draftOptions);
-        console.log('Contains wildcard in options?', this.state.draftOptions.includes('wildcard'));
-
-        this.renderDraftScreen();
-        this.switchScreen('draft');
+        this.initGame();
     }
 
-    /**
-     * 渲染選牌畫面
-     */
-    renderDraftScreen() {
-        this.els.draftContainer.innerHTML = '';
-        this.els.confirmDraftBtn.textContent = '確認選擇 (0/4)';
-        DOMHelpers.addClass(this.els.confirmDraftBtn, 'btn-disabled');
-        this.els.confirmDraftBtn.disabled = true;
-
-        this.state.draftOptions.forEach((cardId, index) => {
-            const data = this.dataManager.getCard(cardId);
-            const cardEl = DOMHelpers.create('div',
-                `draft-card w-24 h-40 bg-gradient-to-br ${data.colorClass} rounded-xl shadow-lg border-4 ${data.borderClass} flex flex-col items-center`,
-                `
-                <div class="w-full h-2/3 ${data.iconBg} rounded-t-lg flex items-center justify-center text-4xl border-b-2 border-white/20 pointer-events-none">
-                    ${data.icon}
-                </div>
-                <div class="flex-grow flex items-center justify-center w-full bg-white rounded-b-lg pointer-events-none">
-                    <div class="font-bold text-lg text-slate-800 tracking-widest">${data.name}</div>
-                </div>
-            `);
-            cardEl.onclick = () => this.toggleDraftSelect(index, cardEl);
-            this.els.draftContainer.appendChild(cardEl);
-        });
-    }
-
-    /**
-     * 切換選牌選擇
-     */
-    toggleDraftSelect(index, el) {
-        if (el.classList.contains('selected')) {
-            DOMHelpers.removeClass(el, 'selected');
-        } else {
-            const selectedCount = DOMHelpers.$$('.draft-card.selected').length;
-            if (selectedCount < 4) {
-                DOMHelpers.addClass(el, 'selected');
-            }
-        }
-
-        const selectedEls = DOMHelpers.$$('.draft-card.selected');
-        this.els.confirmDraftBtn.textContent = `確認選擇 (${selectedEls.length}/4)`;
-
-        if (selectedEls.length === 4) {
-            DOMHelpers.removeClass(this.els.confirmDraftBtn, 'btn-disabled');
-            this.els.confirmDraftBtn.disabled = false;
-            // alert("Button Enabled!"); // Debug
-        } else {
-            DOMHelpers.addClass(this.els.confirmDraftBtn, 'btn-disabled');
-            this.els.confirmDraftBtn.disabled = true;
-        }
-    }
-
-    /**
-     * 完成選牌
-     */
-    finishDraft() {
-        try {
-            const selectedEls = Array.from(DOMHelpers.$$('.draft-card.selected'));
-            const allCardEls = Array.from(this.els.draftContainer.children);
-            const selectedCards = selectedEls.map(el => {
-                const idx = allCardEls.indexOf(el);
-                return this.state.draftOptions[idx];
-            });
-            this.state.deck = selectedCards;
-            this.initGame();
-        } catch (e) {
-            alert("Error in finishDraft: " + e.message);
-            console.error(e);
-        }
-    }
+    // === Draft 相關方法已移除（Commit 9）===
+    // goToDraft(), renderDraftScreen(), toggleDraftSelect(), finishDraft()
+    // 新系統不再需要 Draft 階段，玩家直接開始遊戲
 
     /**
      * 初始化遊戲
@@ -706,19 +613,11 @@ class Game {
         const allCards = Object.values(this.dataManager.getAllCards()).filter(card => card.id !== 'wildcard');
         this.wheelSystem.initWheel(allCards);
 
-        // this.updateDrawBtn(); // Removed - no draw button anymore
+        // 新系統：不需要抽牌，手牌保留輔助卡
+        // 移除詞語卡牌，只保留輔助卡牌
+        this.state.hand = this.state.hand.filter(cardId => HELPER_CARDS[cardId]);
 
-        // 手牌回到棄牌堆
-        this.state.returnHandToDiscard();
-
-        // 棄牌堆洗回牌庫
-        this.state.reshuffleDeck(MathHelpers.shuffle);
-        // this.updateDiscardUI(); // Removed - no discard UI anymore
-
-        // 抽初始手牌
-        this.state.drawCardsUntil(GAME_CONFIG.INITIAL_HAND_SIZE);
         this.renderHand();
-        // this.updateDeckUI(); // Removed - no deck UI anymore
     }
 
     /**
@@ -918,9 +817,8 @@ class Game {
                     setTimeout(() => this.goToReward(), GAME_CONFIG.VISUAL.ANIMATION_DURATION_LONG);
                 }
             } else {
-                this.state.drawCardsUntil(GAME_CONFIG.INITIAL_HAND_SIZE);
-                this.renderHand();
-                this.updateDeckUI();
+                // 新系統：不需要抽牌，手牌只包含輔助卡
+                // 詞語卡從輪盤獲得
             }
         });
     }
@@ -941,76 +839,9 @@ class Game {
         }
     }
 
-    /**
-     * 棄牌 (垃圾桶 - 一換一)
-     */
-    discardCard(cardEl) {
-        const cardId = cardEl.dataset.id;
-
-        // 執行棄牌邏輯
-        if (this.state.discardCard(cardId)) {
-            // 獲得抽牌機會
-            this.state.gainDrawChance();
-
-            AnimationUtils.showFloatingMessage(this.els.feedbackContainer, "棄牌換抽！", "text-indigo-400");
-
-            AnimationUtils.vanishCard(cardEl, () => {
-                this.updateDiscardUI();
-                this.updateDrawBtn();
-                this.updateHandLayout();
-            });
-        }
-    }
-
-    /**
-     * 燒牌 (獻祭 - 累積萬用牌)
-     */
-    burnCard(cardEl) {
-        const cardId = cardEl.dataset.id;
-
-        // 執行燒牌邏輯
-        const gainedWildcard = this.state.burnCard(cardId);
-
-        AnimationUtils.showFloatingMessage(this.els.feedbackContainer, "燒牌！", "text-orange-500");
-
-        AnimationUtils.vanishCard(cardEl, () => {
-            this.updateBurnUI(); // 更新燒牌進度
-            this.updateHandLayout();
-
-            // 如果獲得萬用牌
-            if (gainedWildcard) {
-                AnimationUtils.showFloatingMessage(this.els.feedbackContainer, "獲得萬用牌！", "text-yellow-400");
-                this.renderHand(); // 重新渲染手牌以顯示萬用牌
-            }
-        });
-    }
-
-    /**
-     * 更新燒牌 UI
-     */
-    updateBurnUI() {
-        const count = this.state.burnCount;
-        const max = GAME_CONFIG.BURN_REQUIRED_COUNT;
-        const percentage = (count / max) * 100;
-
-        this.els.burnCount.textContent = `${count}/${max}`;
-        this.els.burnProgressBar.style.height = `${percentage}%`;
-    }
-
-    /**
-     * 抽牌
-     */
-    drawCard() {
-        if (this.state.isTransitioning || this.state.drawsLeft <= 0 || this.state.deck.length === 0) return;
-
-        if (this.state.useDrawChance()) {
-            this.state.drawCard();
-            this.updateDeckUI();
-            this.updateDrawBtn();
-            this.renderHand();
-            AnimationUtils.showFloatingMessage(this.els.feedbackContainer, "抽牌！", "text-white");
-        }
-    }
+    // === 棄牌/燒牌/抽牌系統已移除（Commit 9）===
+    // discardCard(), burnCard(), updateBurnUI(), drawCard()
+    // 新系統使用輪盤獲取詞語卡牌，不再需要這些功能
 
     /**
      * 前往獎勵畫面（輔助卡牌獎勵）
